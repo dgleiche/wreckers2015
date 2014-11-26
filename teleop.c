@@ -141,35 +141,35 @@ task main()
 
 			switch (joystick.joy1_TopHat) {
 			case 0: //Top
-				m = forward();
+				m = forward(100);
 				break;
 
 			case 1: //Top Right
-				m = diagFR();
+				m = diagFR(100);
 				break;
 
 			case 2: //Right
-				m = strafeR();
+				m = strafeR(100);
 				break;
 
 			case 3: //Bottom Right
-				m = diagBR();
+				m = diagBR(100);
 				break;
 
 			case 4: //Bottom
-				m = backward();
+				m = backward(100);
 				break;
 
 			case 5: //Bottom Left
-				m = diagBL();
+				m = diagBL(100);
 				break;
 
 			case 6: //Left
-				m = strafeL();
+				m = strafeL(100);
 				break;
 
 			case 7: //Top Left
-				m = diagFL();
+				m = diagFL(100);
 				break;
 
 			default:
