@@ -23,6 +23,10 @@
 
 #include "ref/auto_ref.h"
 
+////////Function Prototypes
+void setMotor(mVals *m);
+void setMotor(float fl, float fr, float bl, float br);
+
 task main()
 {
 	//Initialize components
@@ -45,4 +49,16 @@ task main()
 #endif
 
 
+}
+
+void setMotor(mVals *m) {
+	//Pass along to func with the four motor vals
+	setMotor(m->fl, m->fr, m->bl, m->br);
+}
+
+void setMotor(float fl, float fr, float bl, float br) {
+	motor[FL] = fl;
+	motor[FR] = fr;
+	motor[BL] = bl;
+	motor[BR] = br;
 }
