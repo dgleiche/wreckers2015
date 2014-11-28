@@ -98,7 +98,7 @@ task main()
 	servo[rServo] = 0;
 	servo[lServo] = 0;
 
-	servo[sGyro] = 30;
+	servo[sGyro] = GYRODOWN;
 
 	//Init Gyro
 	wait1Msec(500);
@@ -130,7 +130,7 @@ task main()
 		//clearDebugStream();
 
 		//No unwanted movement
-		m = (abs(tX) > THRESHOLD || abs(tY) > THRESHOLD || abs(rotX) > THRESHOLD) ? calcJoyMove(tX, tY, rotX): setMVals(0, 0, 0, 0);
+		m = (abs(tX) > THRESHOLD || abs(tY) > THRESHOLD || abs(rotX) > THRESHOLD) ? calcJoyMove(tX, tY, rotX) : setMVals(0, 0, 0, 0);
 
 		writeDebugStreamLine("%d", degreesToRadians(HTGYROreadRot(gyro)));
 

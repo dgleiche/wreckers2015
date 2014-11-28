@@ -1,6 +1,10 @@
 #ifndef COMMON_577_REF
 #define COMMON_577_REF
 
+//Constants
+const int GYRODOWN = 30;
+const int GYROUP = 150;
+
 //Whether or not we're in an FTC comp
 //Comment this out if we're not to save time
 //#define wait_for_start
@@ -21,7 +25,7 @@ typedef struct {
 mVals *setMVals(float fl, float fr, float bl, float br);
 rVals *setRVals(float fl, float fr, float bl, float br);
 
-//Functions (we could do this in the h RobotC b/c thats the standard practice?
+//Functions
 //Quickly set vals of an mVal
 mVals *setMVals(float fl, float fr, float bl, float br) {
 	mVals m;
@@ -80,6 +84,34 @@ mVals *diagBL(int power = 50) {
 
 mVals *diagBR(int power = 50) {
 	return diagFL(-power);
+}
+
+//rotate clockwise
+mVals *rCW(int power = 50)
+{
+	return setMVals(power, -power, power, -power);
+}
+
+//rotate counterclockwise
+mVals *rCCW(int power = 50)
+{
+	return setMVals(-power, power, -power, power);
+}
+
+//Easy print overloads
+void print(int x)
+{
+	nxtDisplayCenteredTextLine(2, "%d", x);
+}
+
+void print(const string x)
+{
+	nxtDisplayCenteredTextLine(2, x);
+}
+
+void print(float x)
+{
+	nxtDisplayCenteredTextLine(2, "%f", x);
 }
 
 #endif
