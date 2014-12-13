@@ -2,12 +2,15 @@
 #define COMMON_577_REF
 
 //Constants
-const int GYRODOWN = 30;
-const int GYROUP = 150;
+const int GYRODOWN = 300;
+const int GYROUP = 130;
+
+const int GRABBERDOWN = 0;
+const int GRABBERUP = 110;
 
 //Whether or not we're in an FTC comp
 //Comment this out if we're not to save time
-//#define wait_for_start
+#define wait_for_start
 
 //Easier vars for holding motor vals
 //Translational Motor Vals
