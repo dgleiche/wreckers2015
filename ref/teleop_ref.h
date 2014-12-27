@@ -10,98 +10,101 @@
 //rov_x = requested rotational motion
 //mVals *calcJoyMove(float v_x, float v_y, float w_input, float w_observed);
 
-//mVals *calcJoyMove(float tX, float tY, float rotX);
+mVals *calcJoyMove(float tX, float tY, float rotX);
 
 float find_ang(float x, float y);
 float adjust_ang(float ang, float x, float y);
 
-mVals *calcJoyY(float x, float y) { //In short calc the vertical movement
-	bool moveRight = (x > 0) ? true : false; //if true motors should be positive
-	mVals *mVals;
-	mVals = setMVals(y, y, y, y); //Default value guard
-
-	x = abs(x);
-  mVals->fr += x; //since right will be greater than left (this assumes moveRight is true -- if false will be dealt w/ later
-  mVals->br += x;
-  mVals->fl -= x; //make movement proportional. Dont ask me why/how this works, lots of trial and error
-  mVals->bl -= x;
-
-	if (moveRight) { //Inverse 'em to move opposite direction
-		float oldFrLeft = mVals->fl;
-		float oldFrRight = mVals->fr;
-		float oldBkLeft = mVals->bl;
-		float oldBkRight = mVals->br;
-
-		mVals = setMVals(oldFrRight, oldFrLeft, oldBkRight, oldBkLeft); //Setting the left right
-	}
-
-	//Guard the motor maximums (they should be no greater than 100)
-	if (mVals->fr > 100) mVals->fr = 100;
-  if (mVals->fr < -100) mVals->fr = -100;
-
-  if (mVals->fl < -100) mVals->fl = -100;
-  if (mVals->fl > 100) mVals->fl = 100;
-
-  if (mVals->bl < -100) mVals->bl = -100;
-  if (mVals->bl > 100) mVals->bl = 100;
-
-  if (mVals->br < -100) mVals->br = -100;
-  if (mVals->br > 100) mVals->br = 100;
-
-	return mVals;
-}
-
-mVals *calcJoyX(float x, float y) { //In short calculate the lateral movement
-	bool moveRight = (x > 0) ? true : false; //if true motors should be positive
-	mVals *mVals;
-	//Set a default val
-	mVals = setMVals(y, y, y, y);
-
-	//So we dont get negative vals
-	x = abs(x);
-  mVals->fr += x; //since right will be greater than left (this assumes moveRight is true -- if false will be dealt w/ later
-  if (mVals->fr > 100) mVals->fr = 100;
-  if (mVals->fr < -100) mVals->fr = -100;
-  mVals->fl -= x*(x/100); //make movement proportional
-	if (moveRight) { //Inverse 'em
-		float oldFrLeft = mVals->fl;
-		float oldFrRight = mVals->fr;
-		mVals->fl = oldFrRight;
-		mVals->fr = oldFrLeft;
-	}
-
-	//Makes the back equal to front
-	mVals->bl = mVals->fl;
-	mVals->br = mVals->fr;
-
-	return mVals;
-}
-
-mVals *joyMove(float x, float y) {
-	if (abs(x) > THRESHOLD || abs(y) > THRESHOLD) {
-		float degX = 128;
-		float degY = 128;
-		//Make proportional to the 100 scale that the motors use
-		float perX = (x/degX)*100;
-		float perY = (y/degY)*100;
-
-		//Initialize an instance of mVals
-		mVals *mVals;
-
-		//If the Y value is greater than THRESHOLD than calculate movement vertically
-		if (abs(perY) > THRESHOLD) mVals = calcJoyY(perX, perY);
-		else mVals = calcJoyX(perX, 0);
-
-		return mVals;
-	}
-	else {
-		return setMVals(0, 0, 0, 0); //Stop the robot
-	}
-}
+//Yes I know Funcs in the H are weird but that's RobotC for ya
+//yooz proper gramma foo
+//Functions to calc move code
+//Joystick Move
 
 
+//float theta_net = 0; //the net angular displacement of the robot measured from the beginning of the field-referential rotation
+//float theta_0 = 0; //theta_0 and 1 are used to store values for numerical integration
+//float t_ms = 0; //counter of number of times the function is run (it is updated every millisecond)
 
-/*
+//float maxFour(float a, float b, float c, float d) {
+//	//Max a b
+//float maxVal = (a > b) ? a : b;
+
+//	//c
+//maxVal = (maxVal > c) ? maxVal : c;
+
+//	//d
+//maxVal = (maxVal > d) ? maxVal : d;
+
+//	return maxVal;
+//}
+
+//v_x = translate x
+//v_y = translate y
+//w_input = rotation
+//w_observed = gyro
+//mVals *calcJoyMove(float v_x, float v_y, float w_input, float w_observed) {
+//	float w = (w_input / 128) * 100; v_x = (v_x / 128) * 100; v_y = (v_y / 128) * 100; //This rescales the input to a 0-100 scale.
+
+//	float FLwheel, FRwheel, BLwheel, BRwheel; //FLwheel referes to the front left wheel, and likewise for the rest.
+//	float theta_robot; //The desired angle of motion, from the perspective of the robot – used for rotations which keep the robot moving with a constant velocity
+//	float v_theta; float v_abs; //The desired angle of motion, from the perspective of the field – calculated from v_x and v_y; and the magnitude of the velocity
+
+//	if (w_input == 0) {
+
+//		if (v_x == 0 && v_y == 0) {
+//			FLwheel = 0;
+//			FRwheel = 0;
+//			BLwheel = 0;
+//			BRwheel = 0;
+//		}
+//		else {
+//			FLwheel = (v_y + v_x) / sqrt(2);
+//			FRwheel = (v_y - v_x) / sqrt(2);
+//			BLwheel = (v_y - v_x) / sqrt(2);
+//			BRwheel = (v_y + v_x) / sqrt(2);
+//			}
+//  theta_net = 0; t_ms = 0;
+//	}
+//	else {
+//		if (v_x == 0 && v_y == 0) {
+//			FLwheel = w;
+//			FRwheel = -w;
+//			BLwheel = w;
+//			BRwheel = -w;
+//      theta_net = 0; t_ms = 0;
+//		}
+//		else {
+
+//			if (t_ms == 0) {
+//				theta_net = 0;
+//				theta_0 = w_observed;
+//			}
+//			else {
+//				theta_net += (theta_0 + w_observed)/2000;
+//				theta_0 = w_observed;
+//			}
+
+//			v_theta = atan(-v_x/v_y);
+//			v_abs = sqrt(pow(v_x,2) + pow(v_y, 2));
+
+//			theta_robot = v_theta - theta_net;
+
+//			FLwheel = w + v_abs * (cos(theta_robot) - sin(theta_robot));
+//			FRwheel = -w + v_abs * (cos(theta_robot) + sin(theta_robot));
+//			BLwheel = w + v_abs * (cos(theta_robot) - sin(theta_robot));
+//			BRwheel = -w + v_abs * (cos(theta_robot) + sin(theta_robot));
+
+//			if (FLwheel > 100 || FRwheel > 100 || BLwheel > 100 || BRwheel > 100) {
+//				float max = maxFour(FLwheel,FRwheel,BLwheel,BRwheel);
+//				FLwheel /= max; FRwheel /= max; BLwheel /= max; BRwheel /= max;
+//			}
+//		}
+//	}
+
+//	return setMVals(FLwheel, FRwheel, BLwheel, BRwheel);
+//}
+
+
 mVals *calcJoyMove(float tX, float tY, float rotX) {
 	int rotMax = (rotX < 0) ? -128 : 127;
 	float magRot = (rotX / rotMax) * 100;
@@ -207,7 +210,6 @@ mVals *calcJoyMove(float tX, float tY, float rotX) {
 	 return m;
 
 }
-*/
 
 float find_ang(float x, float y)
 {

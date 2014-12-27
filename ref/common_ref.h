@@ -5,10 +5,8 @@
 const int GYRODOWN = 300;
 const int GYROUP = 130;
 
-const int GRABBERDOWN = 50;
-const int GRABBERUP = 130;
-
-const int THRESHOLD = 20;
+const int GRABBERDOWN = 0;
+const int GRABBERUP = 110;
 
 //Whether or not we're in an FTC comp
 //Comment this out if we're not to save time
@@ -52,7 +50,6 @@ rVals *setRVals(float fl, float fr, float bl, float br) {
 
 
 //Definite Movement Functions
-/*
 mVals *forward(int power = 50) {
 	return setMVals(power, power, power, power);
 }
@@ -102,23 +99,6 @@ mVals *rCW(int power = 50)
 mVals *rCCW(int power = 50)
 {
 	return setMVals(-power, power, -power, power);
-}
-*/
-
-mVals *forward(int power = 50) {
-	return setMVals(power, power, power, power);
-}
-
-mVals *backward(int power = 50) {
-	return setMVals(-power, -power, -power, -power);
-}
-
-mVals *rotL(int power = 50) {
-	return setMVals(-power, power, -power, power);
-}
-
-mVals *rotR(int power = 50) {
-	return setMVals(power, -power, power, -power);
 }
 
 //Easy print overloads
