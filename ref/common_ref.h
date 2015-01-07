@@ -2,11 +2,15 @@
 #define COMMON_577_REF
 
 //Constants
-const int GYRODOWN = 300;
-const int GYROUP = 130;
 
+//Constants for grabber servo up/down
 const int GRABBERDOWN = 0;
 const int GRABBERUP = 110;
+
+//Constants for gyro servo up/down
+//TODO: Actually find out the values
+const int GYROUP = 100;
+const int GYRODOWN = 50;
 
 //Whether or not we're in an FTC comp
 //Comment this out if we're not to save time
@@ -18,17 +22,8 @@ typedef struct {
 	float fl, fr, bl, br;
 } mVals;
 
-//Rotational Motor Vals
-typedef struct {
-	float fl, fr, bl, br;
-} rVals;
-
-//Function prototypes
-//Quickly create an mvals var
-mVals *setMVals(float fl, float fr, float bl, float br);
-rVals *setRVals(float fl, float fr, float bl, float br);
-
 //Functions
+
 //Quickly set vals of an mVal
 mVals *setMVals(float fl, float fr, float bl, float br) {
 	mVals m;
@@ -39,17 +34,7 @@ mVals *setMVals(float fl, float fr, float bl, float br) {
 	return m;
 }
 
-rVals *setRVals(float fl, float fr, float bl, float br) {
-	rVals r;
-	r.fl = fl;
-	r.fr = fr;
-	r.bl = bl;
-	r.br = br;
-	return r;
-}
-
-
-//Definite Movement Functions
+/* Definite Movement Functions */
 mVals *forward(int power = 50) {
 	return setMVals(power, power, power, power);
 }
@@ -90,18 +75,22 @@ mVals *diagBR(int power = 50) {
 }
 
 //rotate clockwise
-mVals *rCW(int power = 50)
+mVals *rCCW(int power = 50)
 {
 	return setMVals(power, -power, power, -power);
 }
 
 //rotate counterclockwise
-mVals *rCCW(int power = 50)
+mVals *rCW(int power = 50)
 {
 	return setMVals(-power, power, -power, power);
 }
 
-//Easy print overloads
+mVals *stopMotors() {
+	return setMVals(0, 0, 0, 0);
+}
+
+/* Easy print overloads */
 void print(int x)
 {
 	nxtDisplayCenteredTextLine(2, "%d", x);
@@ -115,6 +104,13 @@ void print(const string x)
 void print(float x)
 {
 	nxtDisplayCenteredTextLine(2, "%f", x);
+}
+
+void print(float a, float b, float c, float d) {
+	nxtDisplayCenteredTextLine(2, "%f", a);
+	nxtDisplayCenteredTextLine(3, "%f", b);
+	nxtDisplayCenteredTextLine(4, "%f", c);
+	nxtDisplayCenteredTextLine(5, "%f", d);
 }
 
 #endif
