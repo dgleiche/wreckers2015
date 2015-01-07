@@ -193,15 +193,10 @@ mVals *calcJoyMove(float tX, float tY, float rotX) {
 	  float trans_ratio = (mag_power_translational/mag_power_total);
 	  float rot_ratio = (magRot/mag_power_total);
 
-	 // m->fl = (m->fl * trans_ratio) + (rot->fl * rot_ratio);
-	 // m->fr = (m->fr * trans_ratio) + (rot->fr * rot_ratio);
-	 // m->bl = (m->bl * trans_ratio) + (rot->bl * rot_ratio);
-	 // m->br = (m->br * trans_ratio) + (rot->br * rot_ratio);
-
-	   m->fl = (m->fl * trans_ratio) + (rFL * rot_ratio);
-	   m->fr = (m->fr * trans_ratio) + (rFR * rot_ratio);
-	   m->bl = (m->bl * trans_ratio) + (rBL * rot_ratio);
-	   m->br = (m->br * trans_ratio) + (rBR * rot_ratio);
+	  m->fl = (m->fl * trans_ratio) + (rFL * rot_ratio);
+	  m->fr = (m->fr * trans_ratio) + (rFR * rot_ratio);
+	  m->bl = (m->bl * trans_ratio) + (rBL * rot_ratio);
+	  m->br = (m->br * trans_ratio) + (rBR * rot_ratio);
 
 
 	 	return m;
