@@ -4,7 +4,7 @@
 //Constants
 
 //Constants for grabber servo up/down
-const int GRABBERDOWN = 0;
+const int GRABBERDOWN = 10;
 const int GRABBERUP = 110;
 
 //Constants for gyro servo up/down
