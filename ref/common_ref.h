@@ -5,12 +5,10 @@
 
 //Constants for grabber servo up/down
 const int GRABBERDOWN = 10;
-const int GRABBERUP = 110;
+const int GRABBERUP = 90;
 
-//Constants for gyro servo up/down
-//TODO: Actually find out the values
-const int GYROUP = 100;
-const int GYRODOWN = 50;
+const int ARMHATCHDOWN = 100;
+const int ARMHATCHUP = 240;
 
 //Whether or not we're in an FTC comp
 //Comment this out if we're not to save time
@@ -21,6 +19,15 @@ const int GYRODOWN = 50;
 typedef struct {
 	float fl, fr, bl, br;
 } mVals;
+
+typedef enum {
+	elevatorDown,
+	elevatorIR,
+	elevator30,
+	elevator60,
+	elevator90,
+	elevator120
+} elevatorPositions;
 
 //Functions
 
