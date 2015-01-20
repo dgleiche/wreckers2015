@@ -45,6 +45,8 @@ const tMUXSensor color = msensor_S3_2;
 //General correction factor for auto
 const int CF = 2.5;
 
+const int DISTCENTER = 20;
+
 /* Typedefs */
 typedef enum {
 	BLUE1 = 2,
@@ -68,6 +70,8 @@ float headingZ = 0;
 ///Global Variables set with prompts
 TeamColors teamColor;
 
+elevatorPositions elevatorPosition;
+
 /* Function Prototypes */
 
 //Overload our setMotor function to allow two different ways to input the motor value
@@ -82,7 +86,7 @@ void resetHeadingX();
 void resetHeadingZ();
 
 //Make sure bot goes straight
-mVals *gyroFixHeading(mVals *m, float cf);
+mVals *gyroFixHeading(mVals *m);
 
 /* Function Prototypes for actual autonomous objectives */
 //Off ramp objectives
@@ -104,12 +108,14 @@ task updateHeadingX() {
 	time1[T1] = 0;
 
 	while (true) {
+		hogCPU();
 		prevRate = curRate;
 		dt = (float)time1[T2]/(float)1000.0; // msec to sec
 		time1[1] = 0;
 		curRate = (float)HTGYROreadRot(gyroX);
 		headingX += ((float)prevRate+(float)curRate)*(float)0.5*(float)dt;
-		wait1Msec(1);
+		releaseCPU();
+		wait1Msec(5);
 	}
 }
 
@@ -142,7 +148,7 @@ task initialize() {
 	setMotor(stopMotors());
 
 	//Initialize the tube grabber servos up
-	setGrabberServo(GRABBERUP);
+	setGrabberServo(GRABBERDOWN);
 
 	//Let stuff init for a second
 	wait1Msec(1000);
@@ -156,7 +162,7 @@ task initialize() {
 /* TASKS FOR OFF RAMP AUTO */
 
 task main()
-{
+{ while(true) { print(HTIRS2readDCDir(ir); }
 	//Initialize
 	//This will also start a task to asynchronously update the heading
 	StartTask(initialize);
@@ -168,14 +174,67 @@ task main()
 	ir0();
 }
 
+void moveElevatorDown() {
+	while(!TSreadState(elevatorTouch)) {
+		motor[elevator] = -100;
+	}
+
+	motor[elevator] = 0;
+	nMotorEncoder[elevator] = 0;
+}
+
+void moveElevatorIR() {
+	while(nMotorEncoder[elevator] < (float)elevatorIR) {
+		motor[elevator] = 100;
+	}
+
+	motor[elevator] = 0;
+}
+
+void elevatorMove() {
+	servo[armHatch] = ARMHATCHUP;
+
+	switch (elevatorPosition) {
+		case elevatorDown:
+			moveElevatorDown();
+			break;
+		case elevatorIR:
+			moveElevatorDown();
+			moveElevatorIR();
+			break;
+		default:
+			break;
+	}
+}
+
 /* FUNCTIONS FOR OFF RAMP AUTO */
 //When beacon is 0Deg from robot
 void ir0() {
-	//resetHeadingX();
+	resetHeadingX();
 
-	while (true) {
-		print(USreadDist(sonar));
+	while (USreadDist(sonar) > DISTCENTER) {
+		setMotor(backward(30));
 	}
+
+	setMotor(stopMotors());
+
+	//Set elevator to IR level
+	elevatorPosition = elevatorIR;
+	elevatorMove();
+
+	while(HTIRS2readDCDir(ir) > 5) {
+		setMotor(strafeL(30));
+	}
+
+	setMotor(stopMotors());
+
+	//while(HTIRS2readDCDir(ir) < 5) {
+	//	setMotor(strafeR(30));
+	//}
+
+	//setMotor(stopMotors());
+
+	while(true) { print(HTIRS2readDCDir(ir)) }
 }
 
 /* FUNCTIONS FOR RAMP AUTO */
@@ -265,9 +324,9 @@ void alignToLine(Colors color, int timesToAlign) {
 } */
 
 /* Misc. Functions */
-mVals *gyroFixHeading(mVals *m, float cf) {
+mVals *gyroFixHeading(mVals *m) {
 	//Motor powers are adjusted by this value (based on heading and correction factor)
-	float adjusted_val = headingX * cf;
+	float adjusted_val = headingX * CF;
 
 	//Store corrected motor vals
 	mVals newM;

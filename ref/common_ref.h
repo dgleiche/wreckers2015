@@ -22,8 +22,8 @@ typedef struct {
 
 typedef enum {
 	elevatorDown,
-	elevatorIR,
-	elevator30,
+	elevatorIR = 4000,
+	elevator30 = 5700,
 	elevator60,
 	elevator90,
 	elevator120

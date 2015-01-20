@@ -45,9 +45,10 @@ void moveElevatorDown();
 /* Task Prototypes */
 task btnListener();
 task elevatorMove();
-
+float a;
 /* TASKS */
 task elevatorMove() {
+
 	servo[armHatch] = ARMHATCHUP;
 
 	switch (elevatorPosition) {
@@ -66,7 +67,10 @@ task btnListener() {
 	bool armServoDown = false;
 	bool pressed1 = false;
 
-	while(true) {
+	while(true) { a = nMotorEncoder[elevator];
+
+		if (nMotorEncoder[elevator] < 0) nMotorEncoder[elevator] = 0;
+
 		getJoystickSettings(joystick);
 
 		/* JOYSTICK 2 */
@@ -147,6 +151,8 @@ task main()
 	setGrabberServo(GRABBERUP);
 
 	servo[armHatch] = ARMHATCHUP;
+
+	nMotorEncoder[elevator] = 0;
 
 	//Wait for Comp. to start
 #ifdef wait_for_start
@@ -235,6 +241,8 @@ void moveElevatorDown() {
 	}
 
 	motor[elevator] = 0;
+	nMotorEncoder[elevator] = 0;
+
 	elevatorMoving = false;
 }
 
