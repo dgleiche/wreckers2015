@@ -1,15 +1,19 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTServo,  HTMotor)
+#pragma config(Hubs,  S4, HTMotor,  none,     none,     none)
 #pragma config(Sensor, S1,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S2,     HTSMUX1,        sensorI2CCustom)
 #pragma config(Sensor, S3,     HTSMUX2,        sensorI2CCustom)
+#pragma config(Sensor, S4,     ,               sensorI2CMuxController)
 #pragma config(Motor,  mtr_S1_C1_1,     BL,            tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S1_C1_2,     FL,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_1,     collector,     tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_2,     elevator,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C2_2,     elevatorL,     tmotorTetrix, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C4_1,     FR,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C4_2,     BR,            tmotorTetrix, openLoop)
-#pragma config(Servo,  srvo_S1_C3_1,    armHatch,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C3_2,    servo2,               tServoNone)
+#pragma config(Motor,  mtr_S4_C1_1,     elevatorR,     tmotorTetrix, PIDControl, encoder, reversed)
+#pragma config(Motor,  mtr_S4_C1_2,     motorK,        tmotorTetrix, openLoop)
+#pragma config(Servo,  srvo_S1_C3_1,    irServo,              tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_2,    armHatch,             tServoNone)
 #pragma config(Servo,  srvo_S1_C3_3,    servo3,               tServoNone)
 #pragma config(Servo,  srvo_S1_C3_4,    servo4,               tServoNone)
 #pragma config(Servo,  srvo_S1_C3_5,    lServo,               tServoStandard)
@@ -41,6 +45,10 @@ void setMotor(float fl, float fr, float bl, float br);
 void setGrabberServo(int val);
 
 void moveElevatorDown();
+void moveElevatorDist(elevatorPositions position);
+
+void elevatorMotors(int power);
+void resetElevatorEncoders();
 
 /* Task Prototypes */
 task btnListener();
@@ -55,6 +63,14 @@ task elevatorMove() {
 		case elevatorDown:
 			moveElevatorDown();
 			break;
+		case elevator30:
+			moveElevatorDown();
+			moveElevatorDist(elevator30);
+			break;
+		case elevator120:
+			moveElevatorDown();
+			moveElevatorDist(elevator120);
+			break;
 		default:
 			break;
 	}
@@ -67,9 +83,9 @@ task btnListener() {
 	bool armServoDown = false;
 	bool pressed1 = false;
 
-	while(true) { a = nMotorEncoder[elevator];
+	while(true) { a = nMotorEncoder[elevatorL];
 
-		if (nMotorEncoder[elevator] < 0) nMotorEncoder[elevator] = 0;
+		if (nMotorEncoder[elevatorL] < 0 || nMotorEncoder[elevatorR] < 0) resetElevatorEncoders();
 
 		getJoystickSettings(joystick);
 
@@ -84,14 +100,28 @@ task btnListener() {
 			StartTask(elevatorMove);
 		}
 
+		if (joy2Btn(1)) {
+			elevatorPosition = elevator120;
+			StopTask(elevatorMove);
+
+			StartTask(elevatorMove);
+		}
+
+		if (joy2Btn(3)) {
+			elevatorPosition = elevator30;
+			StopTask(elevatorMove);
+
+			StartTask(elevatorMove);
+		}
+
 		//Elevator
 		if (!elevatorMoving) {
 			if (joy1Btn(7))
-				motor[elevator] = -100;
+				elevatorMotors(-100);
 			else if (joy1Btn(8))
-				motor[elevator] = 100;
+				elevatorMotors(100);
 			else
-				motor[elevator] = 0;
+				elevatorMotors(0);
 		}
 
 		if (joy1Btn(1)) {
@@ -152,7 +182,7 @@ task main()
 
 	servo[armHatch] = ARMHATCHUP;
 
-	nMotorEncoder[elevator] = 0;
+	resetElevatorEncoders();
 
 	//Wait for Comp. to start
 #ifdef wait_for_start
@@ -234,14 +264,35 @@ task main()
 /* Functions */
 
 //ELevator Movements
+void elevatorMotors(int power) {
+	motor[elevatorL] = power;
+	motor[elevatorR] = power;
+}
+
+void resetElevatorEncoders() {
+	nMotorEncoder[elevatorL] = 0;
+	nMotorEncoder[elevatorR] = 0;
+}
+
 void moveElevatorDown() {
 	elevatorMoving = true;
 	while(!TSreadState(elevatorTouch)) {
-		motor[elevator] = -100;
+		elevatorMotors(-100);
 	}
 
-	motor[elevator] = 0;
-	nMotorEncoder[elevator] = 0;
+	elevatorMotors(0);
+	resetElevatorEncoders();
+
+	elevatorMoving = false;
+}
+
+void moveElevatorDist(elevatorPositions position) {
+	elevatorMoving = true;
+	while(nMotorEncoder[elevatorL] < position) {
+		elevatorMotors(100);
+	}
+
+	elevatorMotors(0);
 
 	elevatorMoving = false;
 }

@@ -26,7 +26,7 @@ typedef enum {
 	elevator30 = 5700,
 	elevator60,
 	elevator90,
-	elevator120
+	elevator120 = 19500
 } elevatorPositions;
 
 //Functions
@@ -81,14 +81,12 @@ mVals *diagBR(int power = 50) {
 	return diagFL(-power);
 }
 
-//rotate clockwise
-mVals *rCCW(int power = 50)
+mVals *turnLeft(int power = 50)
 {
 	return setMVals(power, -power, power, -power);
 }
 
-//rotate counterclockwise
-mVals *rCW(int power = 50)
+mVals *turnRight(int power = 50)
 {
 	return setMVals(-power, power, -power, power);
 }

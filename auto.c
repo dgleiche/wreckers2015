@@ -1,15 +1,19 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTServo,  HTMotor)
+#pragma config(Hubs,  S4, HTMotor,  none,     none,     none)
 #pragma config(Sensor, S1,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S2,     HTSMUX1,        sensorI2CCustom)
 #pragma config(Sensor, S3,     HTSMUX2,        sensorI2CCustom)
+#pragma config(Sensor, S4,     ,               sensorI2CMuxController)
 #pragma config(Motor,  mtr_S1_C1_1,     BL,            tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S1_C1_2,     FL,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_1,     collector,     tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_2,     elevator,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C2_2,     elevatorL,     tmotorTetrix, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C4_1,     FR,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C4_2,     BR,            tmotorTetrix, openLoop)
-#pragma config(Servo,  srvo_S1_C3_1,    armHatch,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C3_2,    servo2,               tServoNone)
+#pragma config(Motor,  mtr_S4_C1_1,     elevatorR,     tmotorTetrix, PIDControl, encoder)
+#pragma config(Motor,  mtr_S4_C1_2,     motorK,        tmotorTetrix, openLoop)
+#pragma config(Servo,  srvo_S1_C3_1,    irServo,              tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_2,    armHatch,             tServoNone)
 #pragma config(Servo,  srvo_S1_C3_3,    servo3,               tServoNone)
 #pragma config(Servo,  srvo_S1_C3_4,    servo4,               tServoNone)
 #pragma config(Servo,  srvo_S1_C3_5,    lServo,               tServoStandard)
@@ -65,12 +69,10 @@ typedef enum {
 /* Global variables */
 //headingX will store heading in the x plane while headingZ stores heading in the z plane
 float headingX = 0;
-float headingZ = 0;
+float initial_rotSpeedX = 0;
 
 ///Global Variables set with prompts
 TeamColors teamColor;
-
-elevatorPositions elevatorPosition;
 
 /* Function Prototypes */
 
@@ -78,66 +80,34 @@ elevatorPositions elevatorPosition;
 void setMotor(mVals *m);
 void setMotor(float fl, float fr, float bl, float br);
 
+void depositBall(elevatorPositions position);
+
+void approachCenter();
+
+//Elevator
+void elevatorMove(elevatorPositions position);
+void moveElevatorDown();
+void moveElevatorDist(elevatorPositions position);
+
 //Easily set value of grabber servo
 void setGrabberServo(int val);
 
 //Quickly reset heading so we can turn and stuff using gyro
 void resetHeadingX();
-void resetHeadingZ();
+void updateHeadingX();
 
 //Make sure bot goes straight
 mVals *gyroFixHeading(mVals *m);
 
+void gyroTurnLeft(int degrees);
+void gyroTurnRight(int degrees);
+
 /* Function Prototypes for actual autonomous objectives */
 //Off ramp objectives
 void ir0();
+void ir45();
 
 //Ramp Objectives
-void getDownRamp();
-
-/* Asynchronous tasks */
-
-//Continously updates the heading
-task updateHeadingX() {
-
-	HTGYROstartCal(gyroX);
-
-	float prevRate = 0.0;
-	float curRate = 0.0;
-	float dt = 0.0;
-	time1[T1] = 0;
-
-	while (true) {
-		hogCPU();
-		prevRate = curRate;
-		dt = (float)time1[T2]/(float)1000.0; // msec to sec
-		time1[1] = 0;
-		curRate = (float)HTGYROreadRot(gyroX);
-		headingX += ((float)prevRate+(float)curRate)*(float)0.5*(float)dt;
-		releaseCPU();
-		wait1Msec(5);
-	}
-}
-
-task updateHeadingZ() {
-
-	HTGYROstartCal(gyroZ);
-
-	float prevRate = 0.0;
-	float curRate = 0.0;
-	float dt = 0.0;
-	time1[T1] = 0;
-
-	while (true) {
-		prevRate = curRate;
-		dt = (float)time1[T2]/(float)1000.0; // msec to sec
-		time1[1] = 0;
-		curRate = (float)HTGYROreadRot(gyroZ);
-		headingZ += ((float)prevRate+(float)curRate)*(float)0.5*(float)dt;
-		wait1Msec(1);
-	}
-}
-
 
 task initialize() {
 	//Initialize components
@@ -153,8 +123,8 @@ task initialize() {
 	//Let stuff init for a second
 	wait1Msec(1000);
 
-	StartTask(updateHeadingX);
-	//StartTask(updateHeadingZ);
+	//Init. Gyros
+	HTGYROstartCal(gyroX);
 
 	print("Ready!");
 }
@@ -162,7 +132,7 @@ task initialize() {
 /* TASKS FOR OFF RAMP AUTO */
 
 task main()
-{ while(true) { print(HTIRS2readDCDir(ir); }
+{
 	//Initialize
 	//This will also start a task to asynchronously update the heading
 	StartTask(initialize);
@@ -171,7 +141,26 @@ task main()
 		waitForStart();
 	#endif
 
-	ir0();
+	ir45();
+}
+
+void elevatorMove(elevatorPositions position) {
+	servo[armHatch] = ARMHATCHUP;
+
+	switch (position) {
+		case elevatorDown:
+			moveElevatorDown();
+			break;
+		case elevatorIR:
+			moveElevatorDown();
+			moveElevatorDist(elevatorIR);
+			break;
+		case elevator120:
+			moveElevatorDown();
+			moveElevatorDist(elevator120);
+		default:
+			break;
+	}
 }
 
 void moveElevatorDown() {
@@ -183,44 +172,40 @@ void moveElevatorDown() {
 	nMotorEncoder[elevator] = 0;
 }
 
-void moveElevatorIR() {
-	while(nMotorEncoder[elevator] < (float)elevatorIR) {
+void moveElevatorDist(elevatorPositions position) {
+	while(nMotorEncoder[elevator] < (float)position) {
 		motor[elevator] = 100;
 	}
 
 	motor[elevator] = 0;
 }
 
-void elevatorMove() {
-	servo[armHatch] = ARMHATCHUP;
-
-	switch (elevatorPosition) {
-		case elevatorDown:
-			moveElevatorDown();
-			break;
-		case elevatorIR:
-			moveElevatorDown();
-			moveElevatorIR();
-			break;
-		default:
-			break;
-	}
-}
 
 /* FUNCTIONS FOR OFF RAMP AUTO */
-//When beacon is 0Deg from robot
-void ir0() {
-	resetHeadingX();
+void depositBall(elevatorPositions position) {
+	//Raise elevator to 120
+	elevatorMove(position);
 
+	//Deposit ball
+	servo[armHatch] = ARMHATCHDOWN;
+	wait1Msec(2000);
+	servo[armHatch] = ARMHATCHUP;
+}
+
+void approachCenter() {
 	while (USreadDist(sonar) > DISTCENTER) {
 		setMotor(backward(30));
+	}
+
+	//Ensure its not too close
+	while (USreadDist(sonar) < DISTCENTER) {
+		setMotor(forward(30));
 	}
 
 	setMotor(stopMotors());
 
 	//Set elevator to IR level
-	elevatorPosition = elevatorIR;
-	elevatorMove();
+	elevatorMove(elevatorIR);
 
 	while(HTIRS2readDCDir(ir) > 5) {
 		setMotor(strafeL(30));
@@ -228,43 +213,42 @@ void ir0() {
 
 	setMotor(stopMotors());
 
-	//while(HTIRS2readDCDir(ir) < 5) {
-	//	setMotor(strafeR(30));
-	//}
+	//Move back a lil to give it room
+	setMotor(forward(30));
+	wait1Msec(200);
+	setMotor(stopMotors());
+}
 
-	//setMotor(stopMotors());
+//When beacon is 0Deg from robot
+void ir0() {
+	approachCenter();
+	depositBall(elevator120);
+}
 
-	while(true) { print(HTIRS2readDCDir(ir)) }
+void ir45() {
+	//Become parallel to base
+	setMotor(backward(30));
+	wait1Msec(300);
+	setMotor(stopMotors());
+
+	//Rotate 40 degrees
+	gyroTurnRight(40);
+
+	//Orient to center tube
+	while(USreadDist(sonar) > 30) {
+		setMotor(strafeL(30));
+	}
+
+	setMotor(stopMotors());
+
+	while(USreadDist(sonar) > DISTCENTER) {
+		setMotor(backward(30));
+	}
+
+	setMotor(stopMotor());
 }
 
 /* FUNCTIONS FOR RAMP AUTO */
-
-void getDownRamp() {
-	//We reset the heading b/c we're about to use the gyro to know when we're on the ramp
-	resetHeadingZ();
-
-	//TODO: THESE VALUES ARE WAAAAAAAY OFF IM ASSUMING. EVERYTHING THAT CAN GO WRONG WILL GO WRONG
-	//Thresholds for gyro knowing when we're on and off the ramp
-	//By on ramp I mean like have't reached the down the ramp part
-	const float onRampThreshold = 45;
-	const float offRampThreshold = -45;
-
-	//While the heading is less than threshold we havn't made it to the down the ramp part (I know real intuitive)
-	while(headingZ < onRampThreshold) {
-		setMotor(forward(100));
-	}
-
-	//New objective with gyro means new heading
-	resetHeadingZ();
-
-	//While the heading is greater than the threshold we haven't made it off the ramp
-	while(headingZ < offRampThreshold) {
-		setMotor(forward(100));
-	}
-
-	//And you have arrived safely at your destination of off the ramp (allegedly)
-	setMotor(stopMotors());
-}
 
 /*
 void alignToLine(Colors color, int timesToAlign) {
@@ -325,6 +309,9 @@ void alignToLine(Colors color, int timesToAlign) {
 
 /* Misc. Functions */
 mVals *gyroFixHeading(mVals *m) {
+	//Update heading
+	updateHeadingX();
+
 	//Motor powers are adjusted by this value (based on heading and correction factor)
 	float adjusted_val = headingX * CF;
 
@@ -356,10 +343,42 @@ void setGrabberServo(int val) {
 	servo[rServo] = 255-val;
 }
 
-void resetHeadingX() {
-	headingX = 0;
+void resetHeadingX()
+{
+	time1[T1] = 0;
+	initial_rotSpeedX = HTGYROreadRot(gyroX);
 }
 
-void resetHeadingZ() {
-	headingZ = 0;
+void updateHeadingX()
+{
+	float rotSpeed = HTGYROreadRot(gyroX);
+	float dt = time1[T1];//Update time that has passed
+	if((rotSpeed != initial_rotSpeedX) || dt >= 20)
+	{
+		print(headingX);
+		headingX += (initial_rotSpeedX * (dt/1000)); //updates the heading
+		resetHeadingX();
+	}
+}
+
+void gyroTurnLeft(int degrees) {
+	headingX = 0;
+	while(abs(headingX) < degrees) {
+		updateHeadingX();
+
+		setMotor(turnLeft(30));
+	}
+
+	setMotor(stopMotors());
+}
+
+void gyroTurnRight(int degrees) {
+	headingX = 0;
+	while(abs(headingX) < degrees) {
+		updateHeadingX();
+
+		setMotor(turnRight(30));
+	}
+
+	setMotor(stopMotors());
 }
