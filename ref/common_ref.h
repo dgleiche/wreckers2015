@@ -10,6 +10,9 @@ const int GRABBERUP = 90;
 const int ARMHATCHDOWN = 100;
 const int ARMHATCHUP = 240;
 
+const int IRDOWN = 20;
+const int IRUP = 240;
+
 //Whether or not we're in an FTC comp
 //Comment this out if we're not to save time
 #define wait_for_start
@@ -23,10 +26,10 @@ typedef struct {
 typedef enum {
 	elevatorDown,
 	elevatorIR = 4000,
-	elevator30 = 5700,
+	elevator30 = 5150,
 	elevator60,
 	elevator90,
-	elevator120 = 19500
+	elevator120 = 20500
 } elevatorPositions;
 
 //Functions

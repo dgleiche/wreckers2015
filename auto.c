@@ -7,10 +7,10 @@
 #pragma config(Motor,  mtr_S1_C1_1,     BL,            tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S1_C1_2,     FL,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_1,     collector,     tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_2,     elevatorL,     tmotorTetrix, PIDControl, encoder)
+#pragma config(Motor,  mtr_S1_C2_2,     elevatorL,     tmotorTetrix, PIDControl, encoder, reversed)
 #pragma config(Motor,  mtr_S1_C4_1,     FR,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C4_2,     BR,            tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S4_C1_1,     elevatorR,     tmotorTetrix, PIDControl, encoder)
+#pragma config(Motor,  mtr_S4_C1_1,     elevatorR,     tmotorTetrix, PIDControl, encoder, reversed)
 #pragma config(Motor,  mtr_S4_C1_2,     motorK,        tmotorTetrix, openLoop)
 #pragma config(Servo,  srvo_S1_C3_1,    irServo,              tServoStandard)
 #pragma config(Servo,  srvo_S1_C3_2,    armHatch,             tServoNone)
@@ -49,7 +49,7 @@ const tMUXSensor color = msensor_S3_2;
 //General correction factor for auto
 const int CF = 2.5;
 
-const int DISTCENTER = 20;
+const int DISTCENTER = 30;
 
 /* Typedefs */
 typedef enum {
@@ -107,6 +107,9 @@ void gyroTurnRight(int degrees);
 void ir0();
 void ir45();
 
+void elevatorMotors(int power);
+void resetElevatorEncoders();
+
 //Ramp Objectives
 
 task initialize() {
@@ -119,6 +122,8 @@ task initialize() {
 
 	//Initialize the tube grabber servos up
 	setGrabberServo(GRABBERDOWN);
+
+	servo[irServo] = IRDOWN;
 
 	//Let stuff init for a second
 	wait1Msec(1000);
@@ -141,7 +146,7 @@ task main()
 		waitForStart();
 	#endif
 
-	ir45();
+	ir0();
 }
 
 void elevatorMove(elevatorPositions position) {
@@ -165,19 +170,19 @@ void elevatorMove(elevatorPositions position) {
 
 void moveElevatorDown() {
 	while(!TSreadState(elevatorTouch)) {
-		motor[elevator] = -100;
+		elevatorMotors(-100);
 	}
 
-	motor[elevator] = 0;
-	nMotorEncoder[elevator] = 0;
+	elevatorMotors(0);
+	resetElevatorEncoders();
 }
 
 void moveElevatorDist(elevatorPositions position) {
-	while(nMotorEncoder[elevator] < (float)position) {
-		motor[elevator] = 100;
+	while(nMotorEncoder[elevatorL] < (float)position) {
+		elevatorMotors(50);
 	}
 
-	motor[elevator] = 0;
+	elevatorMotors(0);
 }
 
 
@@ -186,10 +191,22 @@ void depositBall(elevatorPositions position) {
 	//Raise elevator to 120
 	elevatorMove(position);
 
+	//Get a lil closer
+	setMotor(backward(30));
+	wait1Msec(200);
+	setMotor(stopMotors());
+
 	//Deposit ball
 	servo[armHatch] = ARMHATCHDOWN;
 	wait1Msec(2000);
 	servo[armHatch] = ARMHATCHUP;
+
+	//Go back
+	setMotor(forward(30));
+	wait1Msec(200);
+	setMotor(stopMotors());
+
+	elevatorMove(elevatorDown);
 }
 
 void approachCenter() {
@@ -205,17 +222,25 @@ void approachCenter() {
 	setMotor(stopMotors());
 
 	//Set elevator to IR level
-	elevatorMove(elevatorIR);
+	servo[irServo] = IRUP;
 
-	while(HTIRS2readDCDir(ir) > 5) {
+	wait1Msec(1000);
+
+	while(HTIRS2readDCDir(ir) > 4) {
 		setMotor(strafeL(30));
 	}
 
+	//Strafe right a bit to compensate
+	setMotor(strafeR(30));
+	wait1Msec(300);
+
 	setMotor(stopMotors());
 
-	//Move back a lil to give it room
+	servo[irServo] = IRDOWN;
+
+	//Go back a bit
 	setMotor(forward(30));
-	wait1Msec(200);
+	wait1Msec(300);
 	setMotor(stopMotors());
 }
 
@@ -245,7 +270,7 @@ void ir45() {
 		setMotor(backward(30));
 	}
 
-	setMotor(stopMotor());
+	setMotor(stopMotors());
 }
 
 /* FUNCTIONS FOR RAMP AUTO */
@@ -326,6 +351,16 @@ mVals *gyroFixHeading(mVals *m) {
 	return newM;
 }
 
+void elevatorMotors(int power) {
+	motor[elevatorL] = power;
+	motor[elevatorR] = power;
+}
+
+void resetElevatorEncoders() {
+	nMotorEncoder[elevatorL] = 0;
+	nMotorEncoder[elevatorR] = 0;
+}
+
 void setMotor(mVals *m) {
 	//Pass along to func with the four motor vals
 	setMotor(m->fl, m->fr, m->bl, m->br);
@@ -340,7 +375,7 @@ void setMotor(float fl, float fr, float bl, float br) {
 
 void setGrabberServo(int val) {
 	servo[lServo] = val;
-	servo[rServo] = 255-val;
+	servo[rServo] = 200-val;
 }
 
 void resetHeadingX()

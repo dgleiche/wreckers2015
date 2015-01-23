@@ -7,7 +7,7 @@
 #pragma config(Motor,  mtr_S1_C1_1,     BL,            tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S1_C1_2,     FL,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_1,     collector,     tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_2,     elevatorL,     tmotorTetrix, PIDControl, encoder)
+#pragma config(Motor,  mtr_S1_C2_2,     elevatorL,     tmotorTetrix, PIDControl, encoder, reversed)
 #pragma config(Motor,  mtr_S1_C4_1,     FR,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C4_2,     BR,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S4_C1_1,     elevatorR,     tmotorTetrix, PIDControl, encoder, reversed)
@@ -119,7 +119,7 @@ task btnListener() {
 			if (joy1Btn(7))
 				elevatorMotors(-100);
 			else if (joy1Btn(8))
-				elevatorMotors(100);
+				elevatorMotors(50);
 			else
 				elevatorMotors(0);
 		}
@@ -181,6 +181,8 @@ task main()
 	setGrabberServo(GRABBERUP);
 
 	servo[armHatch] = ARMHATCHUP;
+
+	servo[irServo] = IRDOWN;
 
 	resetElevatorEncoders();
 
@@ -289,7 +291,7 @@ void moveElevatorDown() {
 void moveElevatorDist(elevatorPositions position) {
 	elevatorMoving = true;
 	while(nMotorEncoder[elevatorL] < position) {
-		elevatorMotors(100);
+		elevatorMotors(50);
 	}
 
 	elevatorMotors(0);
@@ -299,7 +301,7 @@ void moveElevatorDist(elevatorPositions position) {
 
 void setGrabberServo(int val) {
 	servo[lServo] = val;
-	servo[rServo] = 255-val;
+	servo[rServo] = 200-val;
 }
 
 void setMotor(mVals *m) {
