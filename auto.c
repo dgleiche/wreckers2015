@@ -7,7 +7,7 @@
 #pragma config(Motor,  mtr_S1_C1_1,     BL,            tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S1_C1_2,     FL,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_1,     collector,     tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_2,     elevatorL,     tmotorTetrix, PIDControl, encoder, reversed)
+#pragma config(Motor,  mtr_S1_C2_2,     elevatorL,     tmotorTetrix, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C4_1,     FR,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C4_2,     BR,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S4_C1_1,     elevatorR,     tmotorTetrix, PIDControl, encoder, reversed)
@@ -40,10 +40,6 @@ const tMUXSensor gyroX = msensor_S2_1;
 const tMUXSensor elevatorTouch = msensor_S2_2;
 const tMUXSensor sonar = msensor_S2_3;
 const tMUXSensor ir = msensor_S2_4;
-
-//Multiplexor 2
-const tMUXSensor gyroZ = msensor_S3_1;
-const tMUXSensor color = msensor_S3_2;
 
 /* Constants */
 //General correction factor for auto
@@ -84,6 +80,8 @@ void depositBall(elevatorPositions position);
 
 void approachCenter();
 
+void knockDownKickstand();
+
 //Elevator
 void elevatorMove(elevatorPositions position);
 void moveElevatorDown();
@@ -106,9 +104,12 @@ void gyroTurnRight(int degrees);
 //Off ramp objectives
 void ir0();
 void ir45();
+void ir90();
 
 void elevatorMotors(int power);
 void resetElevatorEncoders();
+
+void parkAuto();
 
 //Ramp Objectives
 
@@ -146,7 +147,30 @@ task main()
 		waitForStart();
 	#endif
 
-	ir0();
+	parkAuto();
+	//ir45();
+}
+
+void parkAuto() {
+	//Determine the orientation of the center goal
+	int lowestDistanceReading = USreadDist(sonar);
+
+	time1[T2] = 0;
+	while(time1[T2] < 1500) {
+		lowestDistanceReading = (USreadDist(sonar) < lowestDistanceReading) ? USreadDist(sonar) : lowestDistanceReading;
+	}
+
+	//Run the proper auto
+	if (lowestDistanceReading < 115)
+		ir0();
+	else if (lowestDistanceReading < 150)
+		ir90();
+	else
+		ir45();
+}
+
+void ir90() {
+
 }
 
 void elevatorMove(elevatorPositions position) {
@@ -155,10 +179,6 @@ void elevatorMove(elevatorPositions position) {
 	switch (position) {
 		case elevatorDown:
 			moveElevatorDown();
-			break;
-		case elevatorIR:
-			moveElevatorDown();
-			moveElevatorDist(elevatorIR);
 			break;
 		case elevator120:
 			moveElevatorDown();
@@ -179,7 +199,8 @@ void moveElevatorDown() {
 
 void moveElevatorDist(elevatorPositions position) {
 	while(nMotorEncoder[elevatorL] < (float)position) {
-		elevatorMotors(50);
+		elevatorMotors(100);
+		servo[armHatch] = ARMHATCHUP;
 	}
 
 	elevatorMotors(0);
@@ -193,7 +214,7 @@ void depositBall(elevatorPositions position) {
 
 	//Get a lil closer
 	setMotor(backward(30));
-	wait1Msec(200);
+	wait1Msec(500);
 	setMotor(stopMotors());
 
 	//Deposit ball
@@ -203,44 +224,61 @@ void depositBall(elevatorPositions position) {
 
 	//Go back
 	setMotor(forward(30));
-	wait1Msec(200);
+	wait1Msec(500);
 	setMotor(stopMotors());
 
 	elevatorMove(elevatorDown);
 }
 
 void approachCenter() {
-	while (USreadDist(sonar) > DISTCENTER) {
-		setMotor(backward(30));
-	}
+	servo[irServo] = IRUP;
 
-	//Ensure its not too close
-	while (USreadDist(sonar) < DISTCENTER) {
-		setMotor(forward(30));
+	wait1Msec(500);
+
+	while (USreadDist(sonar) > DISTCENTER) {
+		setMotor(gyroFixHeading(backward(30)));
 	}
 
 	setMotor(stopMotors());
 
-	//Set elevator to IR level
-	servo[irServo] = IRUP;
-
-	wait1Msec(1000);
+	wait1Msec(500);
 
 	while(HTIRS2readDCDir(ir) > 4) {
-		setMotor(strafeL(30));
+		setMotor(gyroFixHeading(strafeL(50)));
 	}
 
 	//Strafe right a bit to compensate
-	setMotor(strafeR(30));
-	wait1Msec(300);
+	while(HTIRS2readDCDir(ir) < 5) {
+		setMotor(gyroFixHeading(strafeR(50)));
+	}
+
+	//Ensure its not too close
+	setMotor(forward(30));
+
+	wait1Msec(200);
 
 	setMotor(stopMotors());
 
 	servo[irServo] = IRDOWN;
+}
 
-	//Go back a bit
-	setMotor(forward(30));
-	wait1Msec(300);
+void knockDownKickstand() {
+	while(USreadDist(sonar) > 50) {
+		setMotor(strafeR(50));
+	}
+
+	while (USreadDist(sonar) < 50) {
+		setMotor(strafeR(50));
+	}
+
+	setMotor(strafeL(200));
+
+	wait1Msec(230);
+
+	setMotor(backward(100));
+
+	wait1Msec(1500);
+
 	setMotor(stopMotors());
 }
 
@@ -248,6 +286,7 @@ void approachCenter() {
 void ir0() {
 	approachCenter();
 	depositBall(elevator120);
+	knockDownKickstand();
 }
 
 void ir45() {
@@ -256,21 +295,26 @@ void ir45() {
 	wait1Msec(300);
 	setMotor(stopMotors());
 
-	//Rotate 40 degrees
-	gyroTurnRight(40);
+	//Rotate 45 degrees
+	gyroTurnRight(45);
+
+	//Reset the heading after turning
+	headingX = 0;
 
 	//Orient to center tube
-	while(USreadDist(sonar) > 30) {
-		setMotor(strafeL(30));
+	while(USreadDist(sonar) > 40) {
+		setMotor(gyroFixHeading(strafeL(50)));
 	}
+
+	setMotor(forward(30));
+
+	wait1Msec(500);
 
 	setMotor(stopMotors());
 
-	while(USreadDist(sonar) > DISTCENTER) {
-		setMotor(backward(30));
-	}
-
-	setMotor(stopMotors());
+	approachCenter();
+	depositBall(elevator120);
+	knockDownKickstand();
 }
 
 /* FUNCTIONS FOR RAMP AUTO */
@@ -340,13 +384,20 @@ mVals *gyroFixHeading(mVals *m) {
 	//Motor powers are adjusted by this value (based on heading and correction factor)
 	float adjusted_val = headingX * CF;
 
+	float fl, fr, bl, br;
+
+	fl = m->fl;
+	fr = m->fr;
+	bl = m->bl;
+	br = m->br;
+
 	//Store corrected motor vals
 	mVals newM;
 
-  newM.fl = m->fl - adjusted_val;
-	newM.fr = m->fr + adjusted_val;
-	newM.bl = m->bl - adjusted_val;
-	newM.br = m->br + adjusted_val;
+  newM.fl = fl - adjusted_val;
+	newM.fr = fr + adjusted_val;
+	newM.bl = bl - adjusted_val;
+	newM.br = br + adjusted_val;
 
 	return newM;
 }

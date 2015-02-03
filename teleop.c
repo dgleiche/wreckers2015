@@ -7,7 +7,7 @@
 #pragma config(Motor,  mtr_S1_C1_1,     BL,            tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S1_C1_2,     FL,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_1,     collector,     tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_2,     elevatorL,     tmotorTetrix, PIDControl, encoder, reversed)
+#pragma config(Motor,  mtr_S1_C2_2,     elevatorL,     tmotorTetrix, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C4_1,     FR,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C4_2,     BR,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S4_C1_1,     elevatorR,     tmotorTetrix, PIDControl, encoder, reversed)
@@ -67,6 +67,9 @@ task elevatorMove() {
 			moveElevatorDown();
 			moveElevatorDist(elevator30);
 			break;
+		case elevator60:
+			moveElevatorDown();
+			moveElevatorDist(elevator60);
 		case elevator120:
 			moveElevatorDown();
 			moveElevatorDist(elevator120);
@@ -83,7 +86,10 @@ task btnListener() {
 	bool armServoDown = false;
 	bool pressed1 = false;
 
-	while(true) { a = nMotorEncoder[elevatorL];
+	while(true) {
+
+		//a is just a global var that lets us set encoder vals easily
+		a = nMotorEncoder[elevatorR];
 
 		if (nMotorEncoder[elevatorL] < 0 || nMotorEncoder[elevatorR] < 0) resetElevatorEncoders();
 
@@ -114,14 +120,28 @@ task btnListener() {
 			StartTask(elevatorMove);
 		}
 
+		if (joy2Btn(4)) {
+			elevatorPosition = elevator60;
+			StopTask(elevatorMove);
+
+			StartTask(elevatorMove);
+		}
+
 		//Elevator
 		if (!elevatorMoving) {
 			if (joy1Btn(7))
 				elevatorMotors(-100);
 			else if (joy1Btn(8))
-				elevatorMotors(50);
+				elevatorMotors(100);
 			else
 				elevatorMotors(0);
+		} else {
+			if (joy1Btn(7) || joy1Btn(8)) {
+				elevatorMoving = false;
+				StopTask(elevatorMove);
+
+				elevatorMotors(0);
+			}
 		}
 
 		if (joy1Btn(1)) {
@@ -290,7 +310,7 @@ void moveElevatorDown() {
 
 void moveElevatorDist(elevatorPositions position) {
 	elevatorMoving = true;
-	while(nMotorEncoder[elevatorL] < position) {
+	while(nMotorEncoder[elevatorR] < position) {
 		elevatorMotors(50);
 	}
 
@@ -301,7 +321,7 @@ void moveElevatorDist(elevatorPositions position) {
 
 void setGrabberServo(int val) {
 	servo[lServo] = val;
-	servo[rServo] = 200-val;
+	servo[rServo] = 280-val;
 }
 
 void setMotor(mVals *m) {
