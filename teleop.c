@@ -7,10 +7,10 @@
 #pragma config(Motor,  mtr_S1_C1_1,     BL,            tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S1_C1_2,     FL,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_1,     collector,     tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_2,     elevatorL,     tmotorTetrix, PIDControl, encoder)
+#pragma config(Motor,  mtr_S1_C2_2,     elevatorL,     tmotorTetrix, encoder)
 #pragma config(Motor,  mtr_S1_C4_1,     FR,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C4_2,     BR,            tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S4_C1_1,     elevatorR,     tmotorTetrix, PIDControl, encoder, reversed)
+#pragma config(Motor,  mtr_S4_C1_1,     elevatorR,     tmotorTetrix, encoder, reversed)
 #pragma config(Motor,  mtr_S4_C1_2,     motorK,        tmotorTetrix, openLoop)
 #pragma config(Servo,  srvo_S1_C3_1,    irServo,              tServoStandard)
 #pragma config(Servo,  srvo_S1_C3_2,    armHatch,             tServoNone)
@@ -53,7 +53,10 @@ void resetElevatorEncoders();
 /* Task Prototypes */
 task btnListener();
 task elevatorMove();
+
+//Global to store current encoder for elevator. Good for debugging.
 float a;
+
 /* TASKS */
 task elevatorMove() {
 
@@ -70,6 +73,7 @@ task elevatorMove() {
 		case elevator60:
 			moveElevatorDown();
 			moveElevatorDist(elevator60);
+			break;
 		case elevator120:
 			moveElevatorDown();
 			moveElevatorDist(elevator120);

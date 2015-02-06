@@ -1,19 +1,17 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTServo,  HTMotor)
 #pragma config(Hubs,  S4, HTMotor,  none,     none,     none)
-#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S2,     HTSMUX1,        sensorI2CCustom)
-#pragma config(Sensor, S3,     HTSMUX2,        sensorI2CCustom)
-#pragma config(Sensor, S4,     ,               sensorI2CMuxController)
+#pragma config(Sensor, S3,     color,          sensorI2CCustom)
 #pragma config(Motor,  mtr_S1_C1_1,     BL,            tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S1_C1_2,     FL,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_1,     collector,     tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_2,     elevatorL,     tmotorTetrix, PIDControl, encoder)
+#pragma config(Motor,  mtr_S1_C2_2,     elevatorL,     tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C4_1,     FR,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C4_2,     BR,            tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S4_C1_1,     elevatorR,     tmotorTetrix, PIDControl, encoder, reversed)
+#pragma config(Motor,  mtr_S4_C1_1,     elevatorR,     tmotorTetrix, openLoop, reversed, encoder)
 #pragma config(Motor,  mtr_S4_C1_2,     motorK,        tmotorTetrix, openLoop)
 #pragma config(Servo,  srvo_S1_C3_1,    irServo,              tServoStandard)
-#pragma config(Servo,  srvo_S1_C3_2,    armHatch,             tServoNone)
+#pragma config(Servo,  srvo_S1_C3_2,    armHatch,             tServoStandard)
 #pragma config(Servo,  srvo_S1_C3_3,    servo3,               tServoNone)
 #pragma config(Servo,  srvo_S1_C3_4,    servo4,               tServoNone)
 #pragma config(Servo,  srvo_S1_C3_5,    lServo,               tServoStandard)
@@ -97,8 +95,8 @@ void updateHeadingX();
 //Make sure bot goes straight
 mVals *gyroFixHeading(mVals *m);
 
-void gyroTurnLeft(int degrees);
-void gyroTurnRight(int degrees);
+void gyroTurnLeft(int degrees, int power);
+void gyroTurnRight(int degrees, int power);
 
 /* Function Prototypes for actual autonomous objectives */
 //Off ramp objectives
@@ -113,6 +111,41 @@ void parkAuto();
 
 //Ramp Objectives
 
+//Task to move elevator asynchronously
+//Var to store whether elevator is moving
+bool elevatorMovingAsync = false;
+
+//Global to store proper elevator position
+elevatorPositions elevatorPosition;
+
+task moveElevatorAsync() {
+	elevatorMovingAsync = true;
+
+	servo[armHatch] = ARMHATCHUP;
+
+	switch (elevatorPosition) {
+		case elevatorDown:
+			moveElevatorDown();
+			break;
+		case elevator30:
+			moveElevatorDown();
+			moveElevatorDist(elevator30);
+			break;
+		case elevator60:
+			moveElevatorDown();
+			moveElevatorDist(elevator60);
+			break;
+		case elevator120:
+			moveElevatorDown();
+			moveElevatorDist(elevator120);
+			break;
+		default:
+			break;
+	}
+
+	elevatorMovingAsync = false;
+}
+
 task initialize() {
 	//Initialize components
 	print("Initializing...");
@@ -125,6 +158,8 @@ task initialize() {
 	setGrabberServo(GRABBERDOWN);
 
 	servo[irServo] = IRDOWN;
+
+	servo[armHatch] = ARMHATCHUP;
 
 	//Let stuff init for a second
 	wait1Msec(1000);
@@ -148,7 +183,6 @@ task main()
 	#endif
 
 	parkAuto();
-	//ir45();
 }
 
 void parkAuto() {
@@ -171,132 +205,47 @@ void parkAuto() {
 
 void ir90() {
 
-}
-
-void elevatorMove(elevatorPositions position) {
-	servo[armHatch] = ARMHATCHUP;
-
-	switch (position) {
-		case elevatorDown:
-			moveElevatorDown();
-			break;
-		case elevator120:
-			moveElevatorDown();
-			moveElevatorDist(elevator120);
-		default:
-			break;
-	}
-}
-
-void moveElevatorDown() {
-	while(!TSreadState(elevatorTouch)) {
-		elevatorMotors(-100);
-	}
-
-	elevatorMotors(0);
-	resetElevatorEncoders();
-}
-
-void moveElevatorDist(elevatorPositions position) {
-	while(nMotorEncoder[elevatorL] < (float)position) {
-		elevatorMotors(100);
-		servo[armHatch] = ARMHATCHUP;
-	}
-
-	elevatorMotors(0);
-}
-
-
-/* FUNCTIONS FOR OFF RAMP AUTO */
-void depositBall(elevatorPositions position) {
-	//Raise elevator to 120
-	elevatorMove(position);
-
-	//Get a lil closer
 	setMotor(backward(30));
 	wait1Msec(500);
 	setMotor(stopMotors());
 
-	//Deposit ball
-	servo[armHatch] = ARMHATCHDOWN;
-	wait1Msec(2000);
-	servo[armHatch] = ARMHATCHUP;
+	headingX = 0;
 
-	//Go back
-	setMotor(forward(30));
-	wait1Msec(500);
-	setMotor(stopMotors());
+	gyroTurnRight(84, 60);
 
-	elevatorMove(elevatorDown);
-}
+	//Go to red line and reset heading
+	headingX = 0;
 
-void approachCenter() {
-	servo[irServo] = IRUP;
-
-	wait1Msec(500);
-
-	while (USreadDist(sonar) > DISTCENTER) {
-		setMotor(gyroFixHeading(backward(30)));
+	while (!(HTCS2readColor(color) == (short)BLUE1 || HTCS2readColor(color) == (short)BLUE2 || HTCS2readColor(color) == (short)RED1 || HTCS2readColor(color) == (short)RED2)) {
+		setMotor(gyroFixHeading(forward(20)));
 	}
 
+	wait1Msec(300);
+
 	setMotor(stopMotors());
 
-	wait1Msec(500);
-
-	while(HTIRS2readDCDir(ir) > 4) {
+	//Orient to center tube
+	while(USreadDist(sonar) > 50) {
 		setMotor(gyroFixHeading(strafeL(50)));
 	}
 
-	//Strafe right a bit to compensate
-	while(HTIRS2readDCDir(ir) < 5) {
-		setMotor(gyroFixHeading(strafeR(50)));
-	}
-
-	//Ensure its not too close
-	setMotor(forward(30));
-
-	wait1Msec(200);
+	wait1Msec(450);
 
 	setMotor(stopMotors());
 
-	servo[irServo] = IRDOWN;
-}
-
-void knockDownKickstand() {
-	while(USreadDist(sonar) > 50) {
-		setMotor(strafeR(50));
-	}
-
-	while (USreadDist(sonar) < 50) {
-		setMotor(strafeR(50));
-	}
-
-	setMotor(strafeL(200));
-
-	wait1Msec(230);
-
-	setMotor(backward(100));
-
-	wait1Msec(1500);
-
-	setMotor(stopMotors());
-}
-
-//When beacon is 0Deg from robot
-void ir0() {
 	approachCenter();
 	depositBall(elevator120);
 	knockDownKickstand();
 }
 
 void ir45() {
-	//Become parallel to base
+	//Move forward off wall a bit
 	setMotor(backward(30));
 	wait1Msec(300);
 	setMotor(stopMotors());
 
 	//Rotate 45 degrees
-	gyroTurnRight(45);
+	gyroTurnRight(45, 30);
 
 	//Reset the heading after turning
 	headingX = 0;
@@ -315,6 +264,93 @@ void ir45() {
 	approachCenter();
 	depositBall(elevator120);
 	knockDownKickstand();
+}
+
+//When beacon is 0Deg from robot
+void ir0() {
+	approachCenter();
+	depositBall(elevator120);
+	knockDownKickstand();
+}
+
+void approachCenter() {
+	elevatorPosition = elevator120;
+
+	StartTask(moveElevatorAsync);
+
+	servo[irServo] = IRUP;
+
+	wait1Msec(500);
+
+	while (USreadDist(sonar) > DISTCENTER) {
+		setMotor(gyroFixHeading(backward(30)));
+	}
+
+	setMotor(stopMotors());
+
+	wait1Msec(500);
+
+	while(HTIRS2readDCDir(ir) > 4) {
+		setMotor(strafeL(40));
+	}
+
+	while(HTIRS2readDCDir(ir) < 5) {
+		setMotor(strafeR(40));
+	}
+
+	setMotor(forward(50));
+
+	wait1Msec(100);
+
+	setMotor(stopMotors());
+
+	servo[irServo] = IRDOWN;
+}
+
+
+/* FUNCTIONS FOR OFF RAMP AUTO */
+void depositBall(elevatorPositions position) {
+
+	//Ensure elevator's at 120
+	while (elevatorMovingAsync == true)
+		wait1Msec(1);
+
+	//Get a lil closer
+	setMotor(backward(30));
+	wait1Msec(200);
+	setMotor(stopMotors());
+
+	//Deposit ball
+	servo[armHatch] = ARMHATCHDOWN;
+	wait1Msec(2000);
+	servo[armHatch] = ARMHATCHUP;
+
+	//Go back
+	setMotor(forward(30));
+	wait1Msec(200);
+	setMotor(stopMotors());
+
+	elevatorMove(elevatorDown);
+}
+
+void knockDownKickstand() {
+	setMotor(strafeR(50));
+
+	wait10Msec(100);
+
+	while (USreadDist(sonar) < 50) {
+		setMotor(strafeR(50));
+	}
+
+	setMotor(strafeL(200));
+
+	wait1Msec(200);
+
+	setMotor(backward(100));
+
+	wait1Msec(2000);
+
+	setMotor(stopMotors());
 }
 
 /* FUNCTIONS FOR RAMP AUTO */
@@ -377,6 +413,40 @@ void alignToLine(Colors color, int timesToAlign) {
 } */
 
 /* Misc. Functions */
+
+void elevatorMove(elevatorPositions position) {
+	servo[armHatch] = ARMHATCHUP;
+
+	switch (position) {
+		case elevatorDown:
+			moveElevatorDown();
+			break;
+		case elevator120:
+			moveElevatorDown();
+			moveElevatorDist(elevator120);
+		default:
+			break;
+	}
+}
+
+void moveElevatorDown() {
+	while(!TSreadState(elevatorTouch)) {
+		elevatorMotors(-100);
+	}
+
+	elevatorMotors(0);
+	resetElevatorEncoders();
+}
+
+void moveElevatorDist(elevatorPositions position) {
+	while(nMotorEncoder[elevatorR] < (float)position) {
+		elevatorMotors(100);
+		servo[armHatch] = ARMHATCHUP;
+	}
+
+	elevatorMotors(0);
+}
+
 mVals *gyroFixHeading(mVals *m) {
 	//Update heading
 	updateHeadingX();
@@ -426,7 +496,7 @@ void setMotor(float fl, float fr, float bl, float br) {
 
 void setGrabberServo(int val) {
 	servo[lServo] = val;
-	servo[rServo] = 200-val;
+	servo[rServo] = 280-val;
 }
 
 void resetHeadingX()
@@ -447,23 +517,105 @@ void updateHeadingX()
 	}
 }
 
-void gyroTurnLeft(int degrees) {
+void gyroTurnLeft(int degrees, int power) {
 	headingX = 0;
 	while(abs(headingX) < degrees) {
 		updateHeadingX();
 
-		setMotor(turnLeft(30));
+		setMotor(turnLeft(power));
+	}
+
+	int timesToCorrect = 1;
+	int timesCorrected = 0;
+
+	while (timesCorrected < timesToCorrect) {
+		if (headingX < 0) {
+			while (headingX < (float)-1*degrees) {
+				setMotor(turnRight(30));
+				updateHeadingX();
+			}
+
+			setMotor(stopMotors());
+
+			while (headingX > (float)-1*degrees) {
+				setMotor(turnLeft(30));
+				updateHeadingX();
+			}
+
+			setMotor(stopMotors());
+
+		}
+		else {
+			while (headingX < (float)degrees) {
+				setMotor(turnLeft(30));
+				updateHeadingX();
+			}
+
+			setMotor(stopMotors());
+
+			while (headingX > (float)degrees) {
+				setMotor(turnRight(30));
+				updateHeadingX();
+			}
+
+			setMotor(stopMotors());
+
+		}
+
+		timesCorrected += 1;
+
 	}
 
 	setMotor(stopMotors());
 }
 
-void gyroTurnRight(int degrees) {
+void gyroTurnRight(int degrees, int power) {
 	headingX = 0;
 	while(abs(headingX) < degrees) {
 		updateHeadingX();
 
-		setMotor(turnRight(30));
+		setMotor(turnRight(power));
+	}
+
+	int timesToCorrect = 1;
+	int timesCorrected = 0;
+
+	while (timesCorrected < timesToCorrect) {
+		if (headingX < 0) {
+			while (headingX < (float)-1*degrees) {
+				setMotor(turnLeft(30));
+				updateHeadingX();
+			}
+
+			setMotor(stopMotors());
+
+			while (headingX > (float)-1*degrees) {
+				setMotor(turnRight(30));
+				updateHeadingX();
+			}
+
+			setMotor(stopMotors());
+
+		}
+		else {
+			while (headingX < (float)degrees) {
+				setMotor(turnRight(30));
+				updateHeadingX();
+			}
+
+			setMotor(stopMotors());
+
+			while (headingX > (float)degrees) {
+				setMotor(turnLeft(30));
+				updateHeadingX();
+			}
+
+			setMotor(stopMotors());
+
+		}
+
+		timesCorrected += 1;
+
 	}
 
 	setMotor(stopMotors());

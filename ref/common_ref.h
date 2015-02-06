@@ -28,7 +28,7 @@ typedef enum {
 	elevator30 = 5150,
 	elevator60 = 10500,
 	elevator90,
-	elevator120 = 21000
+	elevator120 = 21500
 } elevatorPositions;
 
 //Functions
