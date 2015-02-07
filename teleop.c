@@ -27,6 +27,34 @@
 
 #include "ref/teleop_ref.h"
 
+//TYPEDEFS
+typedef enum {
+	BUTTONLEFT = 1,
+	BUTTONBOTTOM = 2,
+	BUTTONRIGHT = 3,
+	BUTTONTOP = 4,
+
+	LEFTJS = 11,
+	RIGHTJS = 12,
+
+	LEFTBUMPER = 5,
+	RIGHTBUMPER = 6,
+
+	LEFTTRIGGER = 7,
+	RIGHTTRIGGER = 8
+} controllerButtons;
+
+typedef enum {
+	dTOP = 0,
+	dTOPRIGHT = 1,
+	dRIGHT = 2,
+	dBOTTOMRIGHT = 3,
+	dBOTTOM = 4,
+	dBOTTOMLEFT = 5,
+	dLEFT = 6,
+	dTOPLEFT = 7
+} dPadButtons;
+
 /* CONSTANTS */
 //MUX Sensors
 const tMUXSensor elevatorTouch = msensor_S2_2;
@@ -74,6 +102,10 @@ task elevatorMove() {
 			moveElevatorDown();
 			moveElevatorDist(elevator60);
 			break;
+		case elevator90:
+			moveElevatorDown();
+			moveElevatorDist(elevator90);
+			break;
 		case elevator120:
 			moveElevatorDown();
 			moveElevatorDist(elevator120);
@@ -101,31 +133,40 @@ task btnListener() {
 
 		/* JOYSTICK 2 */
 		//Elevator Presets
-		if (joy2Btn(2)) {
-			elevatorPosition = elevatorDown;
+		switch (joystick.joy2_TopHat) {
+			case dBOTTOM:
+				elevatorPosition = elevatorDown;
 
-			//Stop the elevator task just incase
-			StopTask(elevatorMove);
+				//Stop the elevator task just incase
+				StopTask(elevatorMove);
 
-			StartTask(elevatorMove);
+				StartTask(elevatorMove);
+				break;
+
+			case dLEFT:
+				elevatorPosition = elevator90;
+				StopTask(elevatorMove);
+
+				StartTask(elevatorMove);
+				break;
+
+			case dRIGHT:
+				elevatorPosition = elevator30;
+				StopTask(elevatorMove);
+
+				StartTask(elevatorMove);
+				break;
+
+			case dTOP:
+				elevatorPosition = elevator60;
+				StopTask(elevatorMove);
+
+				StartTask(elevatorMove);
+				break;
 		}
 
-		if (joy2Btn(1)) {
+		if (joy2Btn(LEFTJS)) {
 			elevatorPosition = elevator120;
-			StopTask(elevatorMove);
-
-			StartTask(elevatorMove);
-		}
-
-		if (joy2Btn(3)) {
-			elevatorPosition = elevator30;
-			StopTask(elevatorMove);
-
-			StartTask(elevatorMove);
-		}
-
-		if (joy2Btn(4)) {
-			elevatorPosition = elevator60;
 			StopTask(elevatorMove);
 
 			StartTask(elevatorMove);
@@ -133,14 +174,14 @@ task btnListener() {
 
 		//Elevator
 		if (!elevatorMoving) {
-			if (joy1Btn(7))
+			if (joy1Btn(LEFTTRIGGER) || joy2Btn(LEFTTRIGGER))
 				elevatorMotors(-100);
-			else if (joy1Btn(8))
+			else if (joy1Btn(RIGHTTRIGGER) || joy2Btn(RIGHTTRIGGER))
 				elevatorMotors(100);
 			else
 				elevatorMotors(0);
 		} else {
-			if (joy1Btn(7) || joy1Btn(8)) {
+			if (joy1Btn(LEFTTRIGGER) || joy1Btn(RIGHTTRIGGER) || joy2Btn(LEFTTRIGGER) || joy2Btn(RIGHTTRIGGER)) {
 				elevatorMoving = false;
 				StopTask(elevatorMove);
 
@@ -148,7 +189,7 @@ task btnListener() {
 			}
 		}
 
-		if (joy1Btn(1)) {
+		if (joy2Btn(BUTTONLEFT)) {
 			if (!pressed1) {
 				if (!armServoDown) {
 					armServoDown = true;
@@ -166,7 +207,7 @@ task btnListener() {
 		}
 
 		//Left and right cylinder collectors
-		if (joy1Btn(3)) {
+		if (joy1Btn(BUTTONRIGHT) || joy2Btn(BUTTONRIGHT)) {
 			if (!pressed3) {
 				if (!grabCylinderDown) {
 					grabCylinderDown = true;
@@ -184,9 +225,9 @@ task btnListener() {
 		}
 
 		//collector intake/outake
-		if (joy1Btn(2))
+		if (joy1Btn(BUTTONBOTTOM) || joy2Btn(BUTTONBOTTOM))
 			motor[collector] = 100;
-		else if (joy1Btn(4))
+		else if (joy1Btn(BUTTONTOP) || joy2Btn(BUTTONTOP))
 			motor[collector] = -100;
 		else
 			motor[collector] = 0;
@@ -315,7 +356,7 @@ void moveElevatorDown() {
 void moveElevatorDist(elevatorPositions position) {
 	elevatorMoving = true;
 	while(nMotorEncoder[elevatorR] < position) {
-		elevatorMotors(50);
+		elevatorMotors(100);
 	}
 
 	elevatorMotors(0);
@@ -325,7 +366,7 @@ void moveElevatorDist(elevatorPositions position) {
 
 void setGrabberServo(int val) {
 	servo[lServo] = val;
-	servo[rServo] = 280-val;
+	servo[rServo] = 290-val;
 }
 
 void setMotor(mVals *m) {

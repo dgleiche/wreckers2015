@@ -25,15 +25,15 @@ typedef struct {
 
 typedef enum {
 	elevatorDown,
-	elevator30 = 5150,
-	elevator60 = 10500,
-	elevator90,
-	elevator120 = 21500
+	elevator30 = 6600,
+	elevator60 = 11500,
+	elevator90 = 17600,
+	elevator120 = 22300
 } elevatorPositions;
 
 //Functions
 
-//Quickly set vals of an mVal
+//Quickly set vals of an MVal
 mVals *setMVals(float fl, float fr, float bl, float br) {
 	mVals m;
 	m.fl = fl;
