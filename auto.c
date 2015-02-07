@@ -65,6 +65,9 @@ typedef enum {
 float headingX = 0;
 float initial_rotSpeedX = 0;
 
+///Global Variables set with prompts
+TeamColors teamColor;
+
 /* Function Prototypes */
 
 //Overload our setMotor function to allow two different ways to input the motor value
@@ -436,7 +439,6 @@ void moveElevatorDown() {
 }
 
 void moveElevatorDist(elevatorPositions position) {
-	//Position will be an enum constant with the value of a desired encoder value
 	while(nMotorEncoder[elevatorR] < (float)position) {
 		elevatorMotors(100);
 		servo[armHatch] = ARMHATCHUP;
