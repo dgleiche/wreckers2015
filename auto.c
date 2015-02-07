@@ -43,7 +43,7 @@ const tMUXSensor ir = msensor_S2_4;
 //General correction factor for auto
 const int CF = 2.5;
 
-const int DISTCENTER = 30;
+const int DISTCENTER = 33;
 
 /* Typedefs */
 typedef enum {
@@ -206,18 +206,18 @@ void parkAuto() {
 void ir90() {
 
 	setMotor(backward(30));
-	wait1Msec(500);
+	wait1Msec(700);
 	setMotor(stopMotors());
 
-	headingX = 0;
-
-	gyroTurnRight(84, 60);
+	gyroTurnRight(87, 60);
 
 	//Go to red line and reset heading
 	headingX = 0;
 
+	setMotor(stopMotors());
+
 	while (!(HTCS2readColor(color) == (short)BLUE1 || HTCS2readColor(color) == (short)BLUE2 || HTCS2readColor(color) == (short)RED1 || HTCS2readColor(color) == (short)RED2)) {
-		setMotor(gyroFixHeading(forward(20)));
+		setMotor(gyroFixHeading(forward(18)));
 	}
 
 	wait1Msec(300);
@@ -317,7 +317,7 @@ void depositBall(elevatorPositions position) {
 
 	//Get a lil closer
 	setMotor(backward(30));
-	wait1Msec(200);
+	wait1Msec(400);
 	setMotor(stopMotors());
 
 	//Deposit ball
@@ -327,7 +327,7 @@ void depositBall(elevatorPositions position) {
 
 	//Go back
 	setMotor(forward(30));
-	wait1Msec(200);
+	wait1Msec(400);
 	setMotor(stopMotors());
 
 	elevatorMove(elevatorDown);
