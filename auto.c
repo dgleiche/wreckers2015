@@ -41,7 +41,7 @@ const tMUXSensor ir = msensor_S2_4;
 
 /* Constants */
 //General correction factor for auto
-const int CF = 2;
+const int CF = 2.5;
 
 const int DISTCENTER = 33;
 
@@ -205,11 +205,16 @@ void parkAuto() {
 
 void ir90() {
 
-	setMotor(backward(30));
-	wait1Msec(700);
+	setMotor(strafeR(50));
+	wait1Msec(800);
+	gyroTurnLeft(90, 60);
+	setMotor(strafeR(100));
+	wait1Msec(2800);
+	setMotor(backward(100));
+	wait1Msec(1500);
 	setMotor(stopMotors());
-
-	gyroTurnRight(87, 60);
+/*
+	gyroTurnLeft(83, 60);
 
 	//Go to red line and reset heading
 	headingX = 0;
@@ -217,16 +222,18 @@ void ir90() {
 	setMotor(stopMotors());
 
 	while (!(HTCS2readColor(color) == (short)BLUE1 || HTCS2readColor(color) == (short)BLUE2 || HTCS2readColor(color) == (short)RED1 || HTCS2readColor(color) == (short)RED2)) {
-		setMotor(gyroFixHeading(forward(18)));
+		setMotor(forward(30));
 	}
+
+	setMotor(backward(30));
 
 	wait1Msec(300);
 
 	setMotor(stopMotors());
 
 	//Orient to center tube
-	while(USreadDist(sonar) > 50) {
-		setMotor(gyroFixHeading(strafeL(50)));
+	while(USreadDist(sonar) > 60) {
+		setMotor(gyroFixHeading(strafeR(100)));
 	}
 
 	wait1Msec(450);
@@ -235,24 +242,30 @@ void ir90() {
 
 	approachCenter();
 	depositBall(elevator120);
-	knockDownKickstand();
+	knockDownKickstand();*/
 }
 
 void ir45() {
 	//Move forward off wall a bit
 	setMotor(backward(30));
-	wait1Msec(300);
+	wait1Msec(1400);
 	setMotor(stopMotors());
 
 	//Rotate 45 degrees
-	gyroTurnRight(45, 30);
+	gyroTurnLeft(45, 30);
 
 	//Reset the heading after turning
 	headingX = 0;
 
 	//Orient to center tube
+	time1[T1] = 0;
 	while(USreadDist(sonar) > 40) {
-		setMotor(gyroFixHeading(strafeL(50)));
+		if (time1[T1] > 7000) {
+			while (true) {
+				print("SAFETY ENDED");
+			}
+		}
+		setMotor(gyroFixHeading(strafeR(50)));
 	}
 
 	setMotor(forward(30));
@@ -298,6 +311,8 @@ void approachCenter() {
 		setMotor(strafeR(40));
 	}
 
+	wait1Msec(200);
+
 	setMotor(forward(50));
 
 	wait1Msec(100);
@@ -317,7 +332,7 @@ void depositBall(elevatorPositions position) {
 
 	//Get a lil closer
 	setMotor(backward(30));
-	wait1Msec(400);
+	wait1Msec(500);
 	setMotor(stopMotors());
 
 	//Deposit ball
@@ -327,22 +342,24 @@ void depositBall(elevatorPositions position) {
 
 	//Go back
 	setMotor(forward(30));
-	wait1Msec(400);
+	wait1Msec(500);
 	setMotor(stopMotors());
 
 	elevatorMove(elevatorDown);
 }
 
 void knockDownKickstand() {
-	setMotor(strafeR(50));
+	setMotor(strafeL(50));
 
 	wait10Msec(100);
 
 	while (USreadDist(sonar) < 50) {
-		setMotor(strafeR(50));
+		setMotor(strafeL(50));
 	}
 
-	setMotor(strafeL(200));
+	wait1Msec(700);
+
+	setMotor(strafeR(100));
 
 	wait1Msec(200);
 
@@ -525,7 +542,7 @@ void gyroTurnLeft(int degrees, int power) {
 		setMotor(turnLeft(power));
 	}
 
-	int timesToCorrect = 1;
+	int timesToCorrect = 2;
 	int timesCorrected = 0;
 
 	while (timesCorrected < timesToCorrect) {
